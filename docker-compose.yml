@@ -1,0 +1,78 @@
+services:
+
+  app:
+    build: ./app
+    container_name: ai-demo-app
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - app_logs:/data
+
+    environment:
+      LOG_FILE: /data/app.log
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+
+  analyzer:
+    build: ./analyzer
+    container_name: ai-incident-analyzer
+
+    depends_on:
+      app:
+        condition: service_healthy
+
+    ports:
+      - "8001:8001"
+
+    volumes:
+      - app_logs:/data:ro
+      - incident_data:/incidents
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    environment:
+      LOG_FILE: /data/app.log
+      INCIDENT_DIR: /incidents
+
+      AI_ENABLED: ${AI_ENABLED:-true}
+
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:1b}
+
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+
+      ERROR_BATCH_SIZE: ${ERROR_BATCH_SIZE:-3}
+
+      POLL_INTERVAL: ${POLL_INTERVAL:-2}
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+
+volumes:
+  app_logs:
+  incident_data:

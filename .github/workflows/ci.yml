@@ -1,0 +1,46 @@
+name: CI 
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+jobs:
+
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+
+          pip install \
+            -r analyzer/requirements.txt
+
+      - name: Run tests
+        run: |
+
+          pytest -q
+
+      - name: Build analyzer image
+        run: |
+
+          docker build -t ai-incident-analyzer:ci ./analyzer
+
+      - name: Build application image
+        run: |
+
+          docker build -t ai-demo-app:ci ./app
+
